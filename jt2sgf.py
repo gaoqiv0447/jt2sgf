@@ -1,18 +1,30 @@
-####################################
+
+###
 # 竞智网棋谱，转为sgf格式棋谱
 # author：舒克爸爸
-# 日期：2023年6月19日
-# version：0.2
-# 问题：解决了特殊情况：停一手和认输字样
-####################################
+# 日期：2023年6月20日
+# version：0.3
+# 解决了特殊情况：停一手和认输字样
+# 支持了从竞智网复制棋谱到txt文档，程序自动当前文件夹下遍历txt文档，读取数据，分别转为sgf文件，文件名不变
+###
 import string
 from sgfmill import sgf
-# import sgfmill
+import os
+import glob
+import codecs
+import chardet
 
+# 增加$符号进行分割，方便后续数据处理
 def add_dollar_separator(s):
     # 将字符串中的左方括号后面加上逗号
     s = s.replace(']', ']@', s.count(']') - 1)
     return s
+
+# 检测文件的编码格式
+def detect_encoding(file_path):
+    with open(file_path, 'rb') as f:
+        result = chardet.detect(f.read())
+        return result['encoding']
 
 # 把黑棋数据转换，写入dictionary
 def cov_blackdata2dic(s):
@@ -74,7 +86,6 @@ def dic2coordinate(coordinate_dic):
         # print(coordinate_dic[key][0])
         # print(char_to_intcoordinate(coordinate_dic[key][1]))
         if coordinate_dic[key][0] == '':
-            print("*******************")
             coordinate_number.append(())
         else:
             list_tmp = [letter_to_number(coordinate_dic[key][0]), char_to_intcoordinate(coordinate_dic[key][1])]
@@ -83,7 +94,7 @@ def dic2coordinate(coordinate_dic):
         # coordinate_dic[key]
         
         # coordinate_number.append(tuple(list_tmp))
-    print(coordinate_number)
+    # print(coordinate_number)
     return coordinate_number
 
 # 字母转为坐标值
@@ -116,7 +127,7 @@ def char_to_intcoordinate(char):
     return num - 1
 
 # 写入到sgf文件中
-def write2sgf(moves):
+def write2sgf(moves, sgf_name):
     # 一个包含黑白棋每一步坐标的数组数据
     # moves = [(0, 0), (1, 0), (0, 1), (1, 1)]
     # 创建一个新的SGF文件
@@ -127,6 +138,8 @@ def write2sgf(moves):
     root_node.set("GM", 1)
     root_node.set("FF", 4)
     root_node.set("SZ", 19)
+    root_node.set("CP", "舒克爸爸")
+    root_node.set("GN", "竞智网")
     
     # 将每一步棋添加到SGF文件中
     for move in moves:
@@ -143,11 +156,10 @@ def write2sgf(moves):
         move_re = tuple(reversed(move))
         node.set_move(color, move_re)
 
-
     # 将SGF文件写入到文件中
-    with open("game_of_jz.sgf", "wb") as f:
+    with open(sgf_name, "wb") as f:
         f.write(sgf_game.serialise())
-    print("------------------------------------")
+    print("-------- 转换sgf格式完毕 --------------")
     return
 
 # 测试用的黑棋和白棋数据，从竞智网直接复制的棋谱数据
@@ -168,29 +180,71 @@ def write2sgf(moves):
 # s_black = ""
 # s_white = ""
 
-s_black = "112:[O,2]111:[O,3]110:[L,14]109:[J,18]108:[G,16]107:[F,13]106:[J,13]105:[E,7]104:[K,6]103:[K,8]102:[G,7]101:[L,6]100:[F,18]99:[N,5]98:[K,4]97:[K,14]96:[A,15]95:[A,14]94:[B,15]93:[E,2]92:[J,8]91:[F,10]90:[K,7]89:[J,10]88:[H,10]87:[J,9]86:[Q,11]85:[T,6]84:[T,3]83:[T,5]82:[G,18]81:[J,17]80:[P,9]79:[P,12]78:[M,6]77:[M,8]76:[K,10]75:[L,9]74:[K,11]73:[N,2]72:[G,2]71:[F,5]70:[J,2]69:[G,6]68:[H,5]67:[T,4]66:[M,7]65:[F,12]64:[F,11]63:[D,9]62:[E,10]61:[E,9]60:[B,17]59:[C,16]58:[F,16]57:[E,18]56:[D,18]55:[C,18]54:[D,17]53:[F,17]52:[N,13]51:[O,18]50:[N,18]49:[M,18]48:[L,16]47:[P,18]46:[M,17]45:[K,16]44:[N,12]43:[O,12]42:[T,11]41:[P,13]40:[Q,12]39:[R,13]38:[O,16]37:[M,5]36:[O,4]35:[O,6]34:[O,5]33:[N,9]32:[N,8]31:[R,11]30:[S,11]29:[R,5]28:[P,6]27:[R,6]26:[S,3]25:[R,4]24:[O,9]23:[Q,9]22:[R,10]21:[D,7]20:[K,3]19:[C,2]18:[F,4]17:[J,5]16:[J,4]15:[L,4]14:[O,17]13:[S,17]12:[S,16]11:[Q,17]10:[R,17]9:[R,14]8:[D,6]7:[D,5]6:[C,5]5:[C,3]4:[F,3]3:[Q,5]2:[Q,3]1:[D,4]"
-s_white = "111:[M,2]110:[N,3]109:[J,15]108:[H,16]107:[F,14]106:[J,12]105:停一手104:[F,8]103:[L,9]102:[H,8]101:[H,7]100:[L,7]99:[G,19]98:[P,7]97:[L,3]96:[B,12]95:[A,13]94:[B,14]93:[G,1]92:[G,11]91:[G,9]90:[G,10]89:[K,12]88:[J,11]87:[L,8]86:[K,9]85:[N,11]84:[H,11]83:[S,8]82:[H,18]81:[G,17]80:[L,11]79:[P,10]78:[Q,13]77:[N,6]76:[M,9]75:[L,10]74:[M,10]73:[F,2]72:[J,1]71:[H,2]70:[H,3]69:[Q,14]68:[G,4]67:[R,7]66:[T,7]65:[E,13]64:[E,12]63:[C,9]62:[E,11]61:[D,10]60:[G,15]59:[C,15]58:[F,15]57:[H,17]56:[E,16]55:[E,17]54:[C,17]53:[N,14]52:[M,13]51:[M,12]50:[O,15]49:[N,16]48:[N,17]47:[L,17]46:[P,17]45:[M,16]44:[M,14]43:[O,14]42:[O,13]41:[R,15]40:[S,12]39:[S,13]38:[P,14]37:[M,3]36:[M,4]35:[N,7]34:[P,4]33:[P,5]32:[O,7]31:[O,8]30:[S,9]29:[S,10]28:[Q,7]27:[S,6]26:[Q,6]25:[S,4]24:[S,5]23:[Q,8]22:[R,8]21:[C,8]20:[K,2]19:[L,2]18:[G,5]17:[G,3]16:[H,4]15:[J,3]14:[C,14]13:[S,14]12:[S,15]11:[P,16]10:[R,16]9:[R,12]8:[C,7]7:[B,5]6:[B,4]5:[B,3]4:[C,4]3:[C,6]2:[D,16]1:[Q,16]"
+# s_black = "112:[O,2]111:[O,3]110:[L,14]109:[J,18]108:[G,16]107:[F,13]106:[J,13]105:[E,7]104:[K,6]103:[K,8]102:[G,7]101:[L,6]100:[F,18]99:[N,5]98:[K,4]97:[K,14]96:[A,15]95:[A,14]94:[B,15]93:[E,2]92:[J,8]91:[F,10]90:[K,7]89:[J,10]88:[H,10]87:[J,9]86:[Q,11]85:[T,6]84:[T,3]83:[T,5]82:[G,18]81:[J,17]80:[P,9]79:[P,12]78:[M,6]77:[M,8]76:[K,10]75:[L,9]74:[K,11]73:[N,2]72:[G,2]71:[F,5]70:[J,2]69:[G,6]68:[H,5]67:[T,4]66:[M,7]65:[F,12]64:[F,11]63:[D,9]62:[E,10]61:[E,9]60:[B,17]59:[C,16]58:[F,16]57:[E,18]56:[D,18]55:[C,18]54:[D,17]53:[F,17]52:[N,13]51:[O,18]50:[N,18]49:[M,18]48:[L,16]47:[P,18]46:[M,17]45:[K,16]44:[N,12]43:[O,12]42:[T,11]41:[P,13]40:[Q,12]39:[R,13]38:[O,16]37:[M,5]36:[O,4]35:[O,6]34:[O,5]33:[N,9]32:[N,8]31:[R,11]30:[S,11]29:[R,5]28:[P,6]27:[R,6]26:[S,3]25:[R,4]24:[O,9]23:[Q,9]22:[R,10]21:[D,7]20:[K,3]19:[C,2]18:[F,4]17:[J,5]16:[J,4]15:[L,4]14:[O,17]13:[S,17]12:[S,16]11:[Q,17]10:[R,17]9:[R,14]8:[D,6]7:[D,5]6:[C,5]5:[C,3]4:[F,3]3:[Q,5]2:[Q,3]1:[D,4]"
+# s_white = "111:[M,2]110:[N,3]109:[J,15]108:[H,16]107:[F,14]106:[J,12]105:停一手104:[F,8]103:[L,9]102:[H,8]101:[H,7]100:[L,7]99:[G,19]98:[P,7]97:[L,3]96:[B,12]95:[A,13]94:[B,14]93:[G,1]92:[G,11]91:[G,9]90:[G,10]89:[K,12]88:[J,11]87:[L,8]86:[K,9]85:[N,11]84:[H,11]83:[S,8]82:[H,18]81:[G,17]80:[L,11]79:[P,10]78:[Q,13]77:[N,6]76:[M,9]75:[L,10]74:[M,10]73:[F,2]72:[J,1]71:[H,2]70:[H,3]69:[Q,14]68:[G,4]67:[R,7]66:[T,7]65:[E,13]64:[E,12]63:[C,9]62:[E,11]61:[D,10]60:[G,15]59:[C,15]58:[F,15]57:[H,17]56:[E,16]55:[E,17]54:[C,17]53:[N,14]52:[M,13]51:[M,12]50:[O,15]49:[N,16]48:[N,17]47:[L,17]46:[P,17]45:[M,16]44:[M,14]43:[O,14]42:[O,13]41:[R,15]40:[S,12]39:[S,13]38:[P,14]37:[M,3]36:[M,4]35:[N,7]34:[P,4]33:[P,5]32:[O,7]31:[O,8]30:[S,9]29:[S,10]28:[Q,7]27:[S,6]26:[Q,6]25:[S,4]24:[S,5]23:[Q,8]22:[R,8]21:[C,8]20:[K,2]19:[L,2]18:[G,5]17:[G,3]16:[H,4]15:[J,3]14:[C,14]13:[S,14]12:[S,15]11:[P,16]10:[R,16]9:[R,12]8:[C,7]7:[B,5]6:[B,4]5:[B,3]4:[C,4]3:[C,6]2:[D,16]1:[Q,16]"
 
 # s_black = "94:[N,2]93:[S,13]92:[S,8]91:[G,6]90:[E,6]89:[H,7]88:[J,7]87:[O,11]86:[J,10]85:[E,17]84:[C,15]83:[N,16]82:[N,10]81:[Q,13]80:[M,15]79:[L,14]78:[L,13]77:[L,12]76:[A,6]75:[O,11]74:[Q,11]73:[P,10]72:[R,13]71:[P,13]70:[Q,12]69:[P,12]68:[N,13]67:[M,11]66:[M,17]65:[N,18]64:[K,17]63:[P,16]62:[N,14]61:[N,15]60:[L,10]59:[R,8]58:[Q,9]57:[M,9]56:[O,9]55:[N,9]54:[O,8]53:[N,7]52:[P,9]51:[O,4]50:[P,5]49:[P,6]48:[G,7]47:[B,10]46:[C,5]45:[B,5]44:[D,5]43:[C,9]42:[G,11]41:[H,9]40:[B,9]39:[H,8]38:[G,5]37:[F,6]36:[D,3]35:[E,5]34:[F,4]33:[G,10]32:[H,13]31:[H,16]30:[G,13]29:[F,15]28:[D,13]27:[D,12]26:[C,11]25:[L,16]24:[F,13]23:[J,16]22:[F,17]21:[F,14]20:[J,17]19:[P,7]18:[P,3]17:[Q,5]16:[Q,4]15:[O,5]14:[O,3]13:[D,11]12:[C,7]11:[N,17]10:[O,17]9:[Q,16]8:[P,17]7:[Q,14]6:[R,14]5:[Q,15]4:[C,6]3:[E,16]2:[C,16]1:[D,4]"
 # s_white = "94:认输93:[T,13]92:[S,14]91:[M,10]90:[H,5]89:[F,7]88:[H,6]87:[K,10]86:[L,11]85:[K,11]84:[F,16]83:[E,15]82:[M,16]81:[L,17]80:[P,14]79:[L,15]78:[M,14]77:[M,13]76:[P,11]75:[A,8]74:[R,11]73:[P,11]72:[S,12]71:[O,12]70:[Q,13]69:[R,12]68:[N,12]67:[M,12]66:[L,18]65:[N,19]64:[M,18]63:[K,16]62:[O,13]61:[O,14]60:[O,15]59:[R,10]58:[R,9]57:[L,9]56:[N,11]55:[M,8]54:[N,6]53:[M,7]52:[O,10]51:[N,8]50:[N,4]49:[P,4]48:[Q,6]47:[G,8]46:[A,9]45:[B,7]44:[B,6]43:[D,6]42:[B,8]41:[F,10]40:[G,9]39:[C,8]38:[G,3]37:[F,8]36:[F,5]35:[E,3]34:[E,4]33:[E,10]32:[K,13]31:[G,16]30:[J,13]29:[E,11]28:[E,14]27:[E,13]26:[E,12]25:[C,12]24:[K,15]23:[G,14]22:[H,17]21:[J,15]20:[G,15]19:[G,17]18:[Q,2]17:[R,5]16:[R,4]15:[M,5]14:[M,3]13:[Q,10]12:[D,9]11:[D,7]10:[O,18]9:[R,18]8:[P,18]7:[R,6]6:[R,16]5:[R,15]4:[J,4]3:[F,3]2:[Q,17]1:[Q,3]"
 
-# 替换特殊字符串
-s_black = s_black.replace("认输", "[,]")
-s_black = s_black.replace("停一手", "[,]")
-s_white = s_white.replace("认输", "[,]")
-s_white = s_white.replace("停一手", "[,]")
 
-# s_black = "4:[N,2]3:[S,13]2:[S,8]1:[G,6]"
-# s_white = "3:[T,13]2:[S,14]1:[M,10]"
-# 对原始数据进行第一步处理，用$符号把每步数据断开
-s_black_1 = add_dollar_separator(s_black)
-s_white_1 = add_dollar_separator(s_white)
-# 把数据拆开后放如dictionary，供后续调用
-coordinate_of_dic = cov_blackdata2dic(s_black_1)
-s_with_white = cov_whitedata2dic(s_white_1)
-# 合并黑棋和白棋数据，统一到一个dictionary
-coordinate_of_dic.update(s_with_white)
-# print(coordinate_of_dic)
-coordinate_list = []
-coordinate_list = dic2coordinate(coordinate_of_dic)
-write2sgf(coordinate_list)
+# 把从竞智网棋谱txt文件，转成sgf文件
+def convert_txt2sgf(content, file_name):
+
+    # 将前两行放入一个字典中
+    jztxt_dic = {}
+
+    # 将前两行转换为字典
+    jztxt_dic = {content[0].strip(): content[1].strip()}
+
+    # 从第三行开始，每两行转换为一个键值对并添加到字典中
+    for i in range(2, len(content), 2):
+        key = content[i].strip()
+        value = content[i+1].strip()
+        jztxt_dic[key] = value
+
+    # print(jztxt_dic)
+    s_black = jztxt_dic['黑子']
+    s_white = jztxt_dic['白子']
+
+    # 将第三行和第四行放入另一个字典中
+    for i in range(2, len(content), 2):
+        jztxt_dic[content[i].strip()] = content[i+1].strip()
+
+    # 替换特殊字符串
+    s_black = s_black.replace("认输", "[,]")
+    s_black = s_black.replace("停一手", "[,]")
+    s_white = s_white.replace("认输", "[,]")
+    s_white = s_white.replace("停一手", "[,]")
+
+    # s_black = "4:[N,2]3:[S,13]2:[S,8]1:[G,6]"
+    # s_white = "3:[T,13]2:[S,14]1:[M,10]"
+    # 对原始数据进行第一步处理，用$符号把每步数据断开
+    s_black_1 = add_dollar_separator(s_black)
+    s_white_1 = add_dollar_separator(s_white)
+    # 把数据拆开后放如dictionary，供后续调用
+    coordinate_of_dic = cov_blackdata2dic(s_black_1)
+    s_with_white = cov_whitedata2dic(s_white_1)
+    # 合并黑棋和白棋数据，统一到一个dictionary
+    coordinate_of_dic.update(s_with_white)
+    # print(coordinate_of_dic)
+    coordinate_list = []
+    coordinate_list = dic2coordinate(coordinate_of_dic)
+    write2sgf(coordinate_list, file_name)
+
+# 作用文件夹为当前文件夹
+folder_path = "./"
+# 遍历文件夹下所有txt文件
+txt_files = [f for f in os.listdir(folder_path) if f.endswith('.txt')]
+
+for txt_file in txt_files:
+    encoding_txt = detect_encoding(txt_file)
+    print(f'The encoding of {txt_file} is {encoding_txt}.')
+    if encoding_txt == "ISO-8859-1":
+        encoding_txt = "GBK"
+    elif encoding_txt == "utf-8":
+        encoding_txt = "utf-8"
+    else :
+        encoding_txt = "utf-8"
+    with open(txt_file, 'r', encoding=encoding_txt) as f:
+        content = f.readlines()
+    convert_txt2sgf(content, txt_file.split('.')[0] + ".sgf")
