@@ -1,5 +1,5 @@
 # jt2sgf
-竞智网围棋比赛(https://www.jt01.com/)棋谱，转为sgf格式棋谱
+竞智网围棋比赛( https://www.jt01.com/ )棋谱，转为sgf格式棋谱
 
 author：舒克爸爸
 日期：2023年6月19日
